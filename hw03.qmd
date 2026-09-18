@@ -1,24 +1,36 @@
 ---
-title: "BEE 4750 Homework 3: Dissolved Oxygen and Monte Carlo"
+title: "BEE 4750 Homework 3: Discretization, Numerical Convergence, and Simulation"
+pdf-title: "BEE 4750/5750"
+pdf-subtitle: "Homework 3: Discretization, Numerical Convergence, and Simulation"
 date: last-modified
 format:
-    html:        
+    html:
         warning: true
         error: true
     ipynb:
         warning: true
         error: true
         code-annotation: below
-    pdf:
-        include-in-header: 
-           text: |
-            \usepackage{fvextra}
-            \DefineVerbatimEnvironment{Highlighting}{Verbatim}{breaklines,commandchars=\\\{\}}
-            \DefineVerbatimEnvironment{OutputCode}{Verbatim}{breaklines,commandchars=\\\{\}}
+    typst:
+        warning: true
+        error: true
+        toc: false
+        date: "09/17/2026"
+        filters:
+          - _assets/typst-pdf/processing.lua
+execute:
+    echo: true
+    eval: true
 engine: julia
 julia:
-    exeflags: ["+1.11.5"]
-format-links: [pdf, ipynb]
+  exeflags: ["+1.11.5"]
+format-links:
+  - format: typst
+    text: PDF
+    icon: file-earmark-pdf
+  - format: ipynb
+    text: Notebook
+    icon: laptop
 ---
 
 ::: {.content-visible when-format="ipynb"}
@@ -30,7 +42,7 @@ format-links: [pdf, ipynb]
 ::: {.callout-important icon=false}
 ### Due Date
 
-Thursday, 10/16/25, 9:00pm
+Thursday, 09/24/26, 9:00pm
 :::
 
 ::: {.content-visible when-format="html"}
@@ -49,10 +61,8 @@ Otherwise, you can [find the Github repository here]({{< var github_org.repo >}}
 
 ### Instructions
 
-
-* Problem 1 asks you to implement a model for dissolved oxygen in a river with multiple waste releases and use this to develop a strategy to ensure regulatory compliance.
-
-
+* Problem 1 asks you to discretize several systems models by hand and reason about characteristic timescales and convergence, without writing any code.
+* Problem 2 asks you to extend the shallow lake model from class to include a sediment phosphorus stock, then use numerical simulation to check convergence and study the resulting long-term lake dynamics.
 
 ### Load Environment
 
@@ -66,76 +76,163 @@ Pkg.instantiate()
 ```
 
 ```{julia}
-using Random
 using Plots
 using LaTeXStrings
-using Distributions
 ```
 
-## Problems (Total: 30 Points)
+## Problems (Total: 50 Points)
 
+::: {.markdown .cell}
+### Problem 1 (15)
 
-::: {.cell .markdown}
+For each of the following systems models, (i) write the forward Euler update rule, (ii) find the (local) characteristic timescale and use it to evaluate whether the given step size $\Delta t$ is a reasonable choice, and (iii) use the given error to predict the error at the new step size, assuming the method is well into its first-order convergence regime.
+:::
 
-### Problem 1 (30 points)
+::: {.markdown .cell}
+#### Problem 1.1 (4)
 
-A river which flows at 6 km/d is receiving waste discharges from two sources which are 15 km apart. The oxygen reaeration rate is 0.55 day^-1^, and the decay rates of CBOD and NBOD are are 0.35 and 0.25 day^-1^, respectively. The river's saturated dissolved oxygen concentration is 10m g/L.
+$$\frac{dC}{dt} = 5 - 0.25C$$
 
-If the characteristics of the river inflow and waste discharges are given in @tbl-river, write a Julia model to compute the dissolved oxygen concentration from the first wastewater discharge to an arbitrary distance `d` km downstream. Use your model to compute the minimum dissolved oxygen concentration up to 50 km downstream and how far downriver this maximum occurs.
+(a) Write the forward Euler update rule for $C(t + \Delta t)$.
 
-| Parameter | River Inflow | Waste Stream 1 | Waste Stream 2 |
-|:---------:|-------------:|---------------:|---------------:|
-| Inflow | 100,000 m^3^/d | 10,000 m^3^/d | 15,000 m^3^/d |
-| DO Concentration | 7.5 mg/L | 5 mg/L | 5 mg/L |
-| CBOD | 5 mg/L | 50 mg/L | 45 mg/L |
-| NBOD | 5 mg/L | 35 mg/L | 35 mg/L |
-: River inflow and waste stream characteristics for Problem 1. {#tbl-river}
+(b) Find the characteristic timescale of this system. Is $\Delta t = 1$ a reasonable starting choice of step size? Justify your answer.
+
+(c) A forward Euler simulation of this system has an error of $0.6$ at $\Delta t = 2$. What error would you expect at $\Delta t = 1$?
 
 :::
 
-::: {.cell .markdown}
+::: {.markdown .cell}
+#### Problem 1.2 (5)
 
-### Problem 1.1
+A well-mixed holding tank has volume $V = 200\ \text{m}^3$ and a through-flow of $Q = 50\ \text{m}^3/\text{yr}$ carrying an inflow concentration $C_\text{in} = 2\ \text{mg/L}$. A pollutant in the tank also decays at a first-order rate $k = 0.3\ \text{yr}^{-1}$. The concentration in the tank, $C(t)$, is governed by
 
-Implement the Streeter-Phelps (analytic) solution for the dissolved oxygen concentration. Plot the dissolved oxygen concentration from the first waste stream to 50 km downriver. What is the minimum value in mg/L?
-:::
+$$\frac{dC}{dt} = \frac{Q}{V}\left(C_\text{in} - C\right) - kC.$$
 
-:::: {.cell .markdown}
+(a) Write the forward Euler update rule for $C(t + \Delta t)$.
 
-### Problem 1.2
+(b) Find the characteristic timescale of this system. Is $\Delta t = 1\ \text{yr}$ a reasonable starting choice of step size? Justify your answer.
 
-Implement a numerically-integrated (discretized) solution for the dissolved oxygen concentration. Using a resolution of 0.5km, conduct a simulation and plot the results on the same axis as the plot from Problem 1.1. How has the minimum value changed? What do you attribute this difference to (be specific about the source of the difference(s) in terms of the simulation dynamics, not just that one is a numerical approximation).
-
-:::
-
-:::: {.cell .markdown}
-
-### Problem 1.3
-
-Using the analytic model, what is the minimum level of treatment (% removal of organic waste; assume this is equivalent to the same level of reduction of the CBOD and NBOD) for waste stream 1 that will ensure that the dissolved oxygen concentration is in compliance with the 4 mg/L standard along with a 5% margin of safety, assuming that waste stream 2 remains untreated? How about if only waste stream 2 is treated?
+(c) A forward Euler simulation of this system has an error of $0.8$ at $\Delta t = 1.6\ \text{yr}$. What error would you expect at $\Delta t = 0.4\ \text{yr}$?
 
 :::
 
-:::: {.cell .markdown}
+::: {.markdown .cell}
+#### Problem 1.3 (6)
 
-### Problem 1.4
+$$\frac{dx}{dt} = 3 - 0.5x^2, \qquad x \geq 0$$
 
-Suppose you are responsible for designing a waste treatment plan for discharges into the river, with a regulatory mandate to keep the dissolved oxygen concentration above 4 mg/L. Discuss whether you'd opt to treat waste stream 2 alone or both waste streams equally. What other information might you need to make a conclusion, if any?
+(a) Write the forward Euler update rule for $x(t + \Delta t)$.
 
-:::
+(b) This system's rate of change depends on the state $x$, so there is no single characteristic timescale for the whole system — only a *local* one. Find the system's equilibrium (be careful about the problem domain), then linearize near it to find the local feedback gain and the local characteristic timescale there. Is $\Delta t = 0.5$ a reasonable starting choice of step size near this equilibrium? Justify your answer.
 
-:::: {.cell .markdown}
-
-### Problem 1.5
-
-Suppose that it is known that the DO concentrations at the river inflow can vary according to a $\text{LogNormal}(2.0, 0.15)$ distribution. Conduct a Monte Carlo simulation of the DO concentration in the river. If you treat only waste stream 1 (based on your analysis from Problem 1.3), what is the expected probability and 95% confidence interval that the river fails to comply with the regulatory standard of 4 mg/L? How did you decide that your Monte Carlo sample size was sufficiently large?
-
+(c) A forward Euler simulation of this system has an error of $1.5$ at $\Delta t = 0.3$. What error would you expect at $\Delta t = 0.1$?
 
 :::
 
+::: {.markdown .cell}
+### Problem 2 (35)
 
+In class, we modeled a shallow lake's phosphorus (P) concentration with
 
-::: {.cell .markdown}
+$$\frac{dP}{dt} = L - sP + R(P),$$
+
+treating the maximum sediment release rate $r$ (inside $R(P)$) as a fixed constant. A more advanced version of this model could be built by noting that $r$ is really $\kappa M$, where $M$ is a **sediment phosphorus pool** — a slowly-filling stock. 
+
+The two-stock model splits the single loss rate $s$ into two pieces (outflow/permanent burial, $s_\text{out}$, and transfer into the sediment, $h$), and adds a second state variable $M(t)$ for the sediment pool:
+
+$$\begin{aligned}
+\frac{dP}{dt} &= L - s_\text{out}P - hP + \kappa M\,\frac{P^q}{m^q + P^q} \\[0.3em]
+\frac{dM}{dt} &= hP - bM - \kappa M\,\frac{P^q}{m^q + P^q}
+\end{aligned}$$
+
+where $b$ is the rate at which sediment P is permanently buried. Use the parameter values in @tbl-lake-params for the rest of this problem.
+
+| Parameter | Meaning | Value |
+|:---:|:---|:---:|
+| $s_\text{out}$ | P outflow/permanent burial rate (from the water column) | $0.3\ \text{yr}^{-1}$ |
+| $h$ | P transfer rate into the sediment | $0.3\ \text{yr}^{-1}$ |
+| $b$ | sediment P burial rate | $0.02\ \text{yr}^{-1}$ |
+| $\kappa$ | sediment recycling rate coefficient | $0.15\ \text{yr}^{-1}$ |
+| $m$ | P concentration at half-maximum sediment release | $25\ \mu\text{g}/\text{L}$ |
+| $q$ | steepness of the sediment release response | $8$ |
+: Parameters for the two-stock lake model. {#tbl-lake-params}
+
+Assume the lake starts with no phosphorus anywhere in the system, $P(0) = M(0) = 0$.
+:::
+
+::: {.markdown .cell}
+#### Problem 2.1 (5)
+
+Derive the forward Euler update rules for $P(t+\Delta t)$ and $M(t + \Delta t)$. Note that these two updates are coupled: at each step, both updates use the *current* $P(t)$ and $M(t)$ (not the newly-updated value of one when computing the other).
+:::
+
+::: {.markdown .cell}
+#### Problem 2.2 (13)
+
+Implement your update rules from Problem 2.1 and use them to simulate the lake under a loading of $L = 10\ \mu\text{g}/(\text{L}\cdot\text{yr})$, starting from $P(0) = M(0) = 0$.
+
+Two different quantities have to be "large enough" here, for two different reasons:
+
+- the **simulation horizon** $T$ has to be long enough for the slow sediment stock $M$ to fill. Its characteristic timescale is $1/b = 1/0.02 = 50\ \text{yr}$, so use $T = 300\ \text{yr}$ — six of those timescales. You will reuse this same run in Problem 2.3.
+- the **step size** $\Delta t$ is what you are actually checking for numerical convergence, at that fixed $T$.
+
+Run a convergence study on $P(30)$, the phosphorus concentration thirty years in. Build a reference solution at a very fine step size, then test a sequence of successively-halved, coarser step sizes against it. Here is the starting point:
+
+```julia
+function simulate_lake(loading, horizon, step)
+    # TODO: forward Euler on P and M, using your update rules from Problem 2.1.
+    # Both updates use the *current* P and M, not a partly-updated value.
+    # Return the full P trajectory as a vector, one entry per step taken.
+    error("simulate_lake has not been written yet -- replace this line with your loop")
+end
+
+step_reference = 0.001                        # 300,000 steps at T = 300; a few seconds
+P_reference = simulate_lake(10.0, 300.0, step_reference)
+P30_reference = P_reference[Int(30 / step_reference)]     # the entry at t = 30 yr
+```
+
+Step sizes that divide 30 evenly keep that indexing simple — $\Delta t = 2, 1, 0.5, 0.25, 0.125, 0.0625$ all do.
+
+Report a table of your step sizes, the resulting $P(30)$, the error relative to your reference, and the empirical order of convergence between successive refinements. Make a log-log plot of error vs. $\Delta t$, and state which step size you will use for the rest of this problem and why.
+
+::: {.callout-tip}
+## Why $P(30)$, and not the value at the end of the run?
+
+A quantity of interest is only useful for a convergence study if it actually *depends* on the step size. By the end of a 300-year run this lake has settled into its long-run state, and every stable step size lands on the same number to six or more digits — there would be nothing left to measure. Thirty years in, the lake is still changing, so the step size still matters.
+
+This is the same reason the lecture example used a peak concentration rather than an end state: pick something the discretization can actually get wrong.
+:::
+
+::: {.callout-warning}
+## A step size that is too large will not just be inaccurate
+
+Forward Euler can blow up entirely, rather than merely losing accuracy, when the step is too large for the *fastest* process in the system. Here that is $P$ itself, with a timescale of $1/(s_\text{out} + h) \approx 1.7\ \text{yr}$ — much faster than the sediment pool that set $T$. **The horizon is governed by the slowest process; the step size is governed by the fastest one.**
+
+Start your sequence at $\Delta t = 2\ \text{yr}$ and halve from there. If you try something much coarser you may see the simulation diverge or oscillate wildly; that is worth a sentence, but it is not what the convergence study is measuring.
+:::
+:::
+
+::: {.markdown .cell}
+#### Problem 2.3 (10)
+
+Using the step size you justified in Problem 2.2, plot $P(t)$ over the full 300-year simulation.
+
+You already have $P(30)$ from Problem 2.2. What does $P$ look like once the simulation has fully run? What is happening physically to the lake between those two points in time, and around when does it happen?
+:::
+
+::: {.markdown .cell}
+#### Problem 2.4 (7)
+
+Suppose a lake manager instead used a simpler **one-stock** model that ignores the sediment pool entirely (as if $\kappa = 0$, so there is no recycling at all):
+
+$$\frac{dP}{dt} = L - s_\text{out}P - hP.$$
+
+What is this simplified model's equilibrium $P$ at $L = 10\ \mu\text{g}/(\text{L}\cdot\text{yr})$, and would the manager have concluded the lake is safely oligotrophic at this loading (recall that sediment release becomes significant once $P$ approaches $m = 25\ \mu\text{g}/\text{L}$)?
+
+Compare this to what you found in Problem 2.3. What does this tell you about the risk of using a simplified model, or a short simulation, to set a "safe" loading level? What would you recommend a lake manager do differently, given what you now know about this system?
+:::
+
+::: {.markdown .cell}
 ## References
 
 List any external references consulted, including classmates.
