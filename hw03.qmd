@@ -176,7 +176,7 @@ Two different quantities have to be "large enough" here, for two different reaso
 - the **simulation horizon** $T$ has to be long enough for the slow sediment stock $M$ to fill. Its characteristic timescale is $1/b = 1/0.02 = 50\ \text{yr}$, so use $T = 300\ \text{yr}$ — six of those timescales. You will reuse this same run in Problem 2.3.
 - the **step size** $\Delta t$ is what you are actually checking for numerical convergence, at that fixed $T$.
 
-Run a convergence study on $P(30)$, the phosphorus concentration thirty years in. Build a reference solution at a very fine step size, then test a sequence of successively-halved, coarser step sizes against it. Here is the starting point:
+Run a convergence study on $P(30)$, the phosphorus concentration thirty years in. Build a reference solution at a very fine step size (smaller than you think you might need), then test a sequence of successively-halved, coarser step sizes against it. Here is a starting point:
 
 ```julia
 function simulate_lake(loading, horizon, step)
@@ -191,17 +191,8 @@ P_reference = simulate_lake(10.0, 300.0, step_reference)
 P30_reference = P_reference[Int(30 / step_reference)]     # the entry at t = 30 yr
 ```
 
-Step sizes that divide 30 evenly keep that indexing simple — $\Delta t = 2, 1, 0.5, 0.25, 0.125, 0.0625$ all do.
 
 Report a table of your step sizes, the resulting $P(30)$, the error relative to your reference, and the empirical order of convergence between successive refinements. Make a log-log plot of error vs. $\Delta t$, and state which step size you will use for the rest of this problem and why.
-
-::: {.callout-tip}
-## Why $P(30)$, and not the value at the end of the run?
-
-A quantity of interest is only useful for a convergence study if it actually *depends* on the step size. By the end of a 300-year run this lake has settled into its long-run state, and every stable step size lands on the same number to six or more digits — there would be nothing left to measure. Thirty years in, the lake is still changing, so the step size still matters.
-
-This is the same reason the lecture example used a peak concentration rather than an end state: pick something the discretization can actually get wrong.
-:::
 
 ::: {.callout-warning}
 ## A step size that is too large will not just be inaccurate
@@ -223,7 +214,7 @@ You already have $P(30)$ from Problem 2.2. What does $P$ look like once the simu
 ::: {.markdown .cell}
 #### Problem 2.4 (7)
 
-Suppose a lake manager instead used a simpler **one-stock** model that ignores the sediment pool entirely (as if $\kappa = 0$, so there is no recycling at all):
+Suppose a lake manager instead used a simpler one-stock model that ignores the sediment pool entirely (as if $\kappa = 0$, so there is no recycling at all):
 
 $$\frac{dP}{dt} = L - s_\text{out}P - hP.$$
 
